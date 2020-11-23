@@ -342,6 +342,8 @@ def multipurpose_handler(multipurpose_map, key, action):
         """Search the multipurpose map for keys that are pressed. If found and
         we have not yet sent it's modifier translation we do so."""
         for k, [ _, mod_key, state ] in multipurpose_map.items():
+            if isinstance(mod_key, dict):
+                mod_key = mod_key["mod_key"]
             if k in _pressed_keys and mod_key not in _pressed_modifier_keys:
                 on_key(mod_key, Action.PRESS)
 
@@ -350,8 +352,12 @@ def multipurpose_handler(multipurpose_map, key, action):
     global _last_key
     global _last_key_time
 
+    hook = None
     if key in multipurpose_map:
         single_key, mod_key, key_state = multipurpose_map[key]
+        if isinstance(mod_key, dict):
+            hook = mod_key.get("hook", None)
+            mod_key = mod_key["mod_key"]
         key_is_down = key in _pressed_keys
         mod_is_down = mod_key in _pressed_modifier_keys
         key_was_last_press = key == _last_key
@@ -366,7 +372,11 @@ def multipurpose_handler(multipurpose_map, key, action):
             # it is the modifier in a combo
             elif mod_is_down:
                 on_key(mod_key, Action.RELEASE)
+            if callable(hook):
+                hook(action)
         elif action == Action.PRESS and not key_is_down:
+            if callable(hook):
+                hook(action)
             _last_key_time = time()
     # if key is not a multipurpose or mod key we want eventual modifiers down
     elif (key not in Modifier.get_all_keys()) and action == Action.PRESS:
